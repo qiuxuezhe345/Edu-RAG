@@ -1,0 +1,44 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.evalvenv/
+.venv/
+venv/
+env/
+
+# IDE and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+config.ini
+.env
+.env.*
+!.env.example
+
+# Logs and generated runtime data
+*.log
+logs/
+tmp/
+output/
+volumes/
+
+# Downloaded/generated ML model weights
+rag_qa/models/
+*.safetensors
+*.bin
+*.msgpack
+*.h5
+
+# Local databases and caches
+*.db
+*.sqlite
+*.sqlite3
+
