@@ -29,6 +29,7 @@ logs/
 tmp/
 output/
 volumes/
+evaluation/results/
 
 # Downloaded/generated ML model weights
 rag_qa/models/
@@ -41,4 +42,3 @@ rag_qa/models/
 *.db
 *.sqlite
 *.sqlite3
-
