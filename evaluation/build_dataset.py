@@ -45,7 +45,14 @@ def parse_json_array(text):
 
 
 def make_client():
-    from openai import OpenAI
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError(
+            "缺少 openai 依赖。请使用项目虚拟环境运行："
+            ".\\.evalvenv\\Scripts\\python.exe -m evaluation.build_dataset；"
+            "或为当前解释器安装：python -m pip install openai"
+        ) from exc
 
     api_key = config.DASHSCOPE_API_KEY or os.getenv("DASHSCOPE_API_KEY", "")
     if not api_key:
