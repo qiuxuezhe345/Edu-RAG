@@ -14,6 +14,15 @@ from main import build_llm
 from rag_qa.core.rag_system import RAGSystem
 from rag_qa.core.vector_store import VectorStore
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATASET = PROJECT_ROOT / "evaluation" / "data" / "benchmark_300.jsonl"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "evaluation" / "results" / "generation"
+
+
+def project_path(value):
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
 
 TARGETS = {
     "faithfulness": 0.907,
@@ -170,8 +179,8 @@ def summarize(rows):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate faithfulness, hallucination and refusal")
-    parser.add_argument("--dataset", default="evaluation/data/benchmark_300.jsonl")
-    parser.add_argument("--output-dir", default="evaluation/results/generation")
+    parser.add_argument("--dataset", default=str(DEFAULT_DATASET))
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--limit", type=int)
     parser.add_argument("--judge-model", default=config.LLM_MODEL)
     parser.add_argument(
@@ -184,7 +193,7 @@ def main():
     )
     args = parser.parse_args()
 
-    records = load_records(args.dataset)
+    records = load_records(project_path(args.dataset))
     if args.subset != "all":
         expected = args.subset == "answerable"
         records = [
@@ -196,7 +205,7 @@ def main():
     if not records:
         parser.error("Dataset is empty")
 
-    output_dir = Path(args.output_dir)
+    output_dir = project_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     llm = build_llm()
     rag_system = RAGSystem(vector_store=VectorStore(), llm=llm)

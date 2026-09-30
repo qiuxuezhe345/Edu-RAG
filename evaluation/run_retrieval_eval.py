@@ -7,6 +7,15 @@ from pathlib import Path
 from evaluation.metrics import load_records, retrieval_metrics, summarize_retrieval
 from rag_qa.core.vector_store import VectorStore
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATASET = PROJECT_ROOT / "evaluation" / "data" / "benchmark_300.jsonl"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "evaluation" / "results" / "retrieval"
+
+
+def project_path(value):
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
 
 VARIANTS = {
     "dense": {"mode": "dense", "rerank": False},
@@ -80,8 +89,8 @@ def write_csv(path, rows):
 
 def main():
     parser = argparse.ArgumentParser(description="Run dense/hybrid/rerank retrieval ablations")
-    parser.add_argument("--dataset", default="evaluation/data/benchmark_300.jsonl")
-    parser.add_argument("--output-dir", default="evaluation/results/retrieval")
+    parser.add_argument("--dataset", default=str(DEFAULT_DATASET))
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS))
     parser.add_argument("--limit", type=int)
     parser.add_argument("--top-k", type=int, default=5)
@@ -91,13 +100,17 @@ def main():
     parser.add_argument("--use-source-filter", action="store_true")
     args = parser.parse_args()
 
-    records = [record for record in load_records(args.dataset) if record.get("answerable", True)]
+    dataset_path = project_path(args.dataset)
+    records = [
+        record for record in load_records(dataset_path)
+        if record.get("answerable", True)
+    ]
     if args.limit:
         records = records[:args.limit]
     if not records:
         parser.error("No answerable records found")
 
-    output_dir = Path(args.output_dir)
+    output_dir = project_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     store = VectorStore()
     all_rows = []
@@ -118,7 +131,7 @@ def main():
         for metric, target in TARGETS.items()
     }
     report = {
-        "dataset": args.dataset,
+        "dataset": str(dataset_path),
         "answerable_queries": len(records),
         "settings": {
             "top_k": args.top_k,

@@ -7,6 +7,15 @@ from pathlib import Path
 from base.config import config
 from evaluation.metrics import load_records, record_contexts
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_SEED = PROJECT_ROOT / "rag_qa" / "data" / "rag_evaluate_data.json"
+DEFAULT_OUTPUT = PROJECT_ROOT / "evaluation" / "data" / "benchmark_300.jsonl"
+
+
+def project_path(value):
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
 
 PARAPHRASE_TEMPLATES = [
     "请问{question}",
@@ -165,8 +174,8 @@ def build_records(seeds, size, negative_ratio, client, model, source):
 
 def main():
     parser = argparse.ArgumentParser(description="Build a reproducible 300-item EduRAG benchmark")
-    parser.add_argument("--seed", default="rag_qa/data/rag_evaluate_data.json")
-    parser.add_argument("--output", default="evaluation/data/benchmark_300.jsonl")
+    parser.add_argument("--seed", default=str(DEFAULT_SEED))
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--size", type=int, default=300)
     parser.add_argument("--negative-ratio", type=float, default=0.1)
     parser.add_argument("--source", default="ai")
@@ -176,14 +185,15 @@ def main():
 
     if args.size < 1 or not 0 <= args.negative_ratio < 1:
         parser.error("--size must be positive and --negative-ratio must be in [0, 1)")
-    seeds = load_records(args.seed)
+    seed_path = project_path(args.seed)
+    output = project_path(args.output)
+    seeds = load_records(seed_path)
     if not seeds:
         parser.error("Seed dataset is empty")
     client = None if args.no_llm else make_client()
     records = build_records(
         seeds, args.size, args.negative_ratio, client, args.model, args.source
     )
-    output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8") as handle:
         for record in records:
