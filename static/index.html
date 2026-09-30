@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>黑马程序员 · 智能问答助手</title>
+<title>知问学伴 | 智能学习助手</title>
 <style>
   :root {
     --primary: #ff6a00;
@@ -348,16 +348,303 @@
     #clearBtn { display: none; }
   }
 </style>
+<style>
+  :root {
+    color-scheme: light;
+    --primary: #405d73;
+    --primary-dark: #2d4658;
+    --primary-soft: #d3d9d8;
+    --bg: #d7bd87;
+    --panel: #efe1bd;
+    --panel-subtle: #e5d2a5;
+    --text: #24343a;
+    --text-secondary: #6c604e;
+    --border: #b89c68;
+    --border-strong: #9f7f4a;
+    --user-bubble: #405d73;
+    --user-text: #ffffff;
+    --assistant-bubble: #f3e7c8;
+    --danger: #974236;
+    --shadow: 0 8px 24px rgba(75, 51, 25, .12);
+    --paper-texture:
+      repeating-linear-gradient(8deg, rgba(78, 52, 24, .025) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(96deg, rgba(255, 255, 255, .045) 0 1px, transparent 1px 12px);
+    --radius: 8px;
+    --header-h: 72px;
+    --sidebar-w: 288px;
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image: var(--paper-texture);
+    letter-spacing: 0;
+  }
+
+  button, select, textarea { font: inherit; letter-spacing: 0; }
+  button { appearance: none; }
+  button:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 3px solid rgba(64, 93, 115, .22);
+    outline-offset: 2px;
+  }
+
+  .header {
+    padding: 0;
+    color: var(--text);
+    background: rgba(239, 225, 189, .96);
+    border-bottom: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .header-left {
+    width: var(--sidebar-w);
+    height: 100%;
+    gap: 12px;
+    padding: 0 18px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+  }
+
+  .header-title { font-family: "Songti SC", "STSong", serif; font-size: 17px; font-weight: 700; line-height: 1.25; }
+  .header-sub { color: var(--text-secondary); opacity: 1; margin-top: 3px; }
+
+  .header-right {
+    flex: 1;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0 24px;
+  }
+
+  .toolbar {
+    gap: 10px;
+    padding: 5px 5px 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-subtle);
+  }
+  .toolbar label { color: var(--text-secondary); font-size: 12px; opacity: 1; }
+  .subject-select {
+    min-width: 132px;
+    padding: 7px 28px 7px 10px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .btn, .icon-btn {
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .btn { min-height: 38px; padding: 8px 12px; border-radius: 8px; font-weight: 600; }
+  .btn:hover, .icon-btn:hover { color: var(--primary-dark); background: var(--primary-soft); border-color: #8d9da5; }
+  .btn:active, .icon-btn:active { transform: translateY(1px); }
+
+  .layout { background-color: var(--bg); background-image: var(--paper-texture); }
+  .sidebar { background: #e4cfa2; border-color: var(--border); }
+  .sidebar-header { min-height: 66px; padding: 14px 14px 10px 18px; }
+  .sidebar-title { color: var(--text-secondary); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  .sidebar-new {
+    min-height: 34px;
+    padding: 6px 10px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    border: 1px solid #8d9da5;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .sidebar-new:hover { background: #c8d0d1; border-color: #718894; }
+  .sidebar-list { padding: 2px 10px 16px; }
+  .sidebar-item { gap: 10px; margin-bottom: 4px; padding: 10px; border: 1px solid transparent; border-radius: 8px; }
+  .sidebar-item:hover { background: var(--panel-subtle); border-color: var(--border); }
+  .sidebar-item.active { background: var(--primary-soft); border-color: #8d9da5; }
+  .sidebar-item .s-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .sidebar-item .s-title { font-size: 13px; font-weight: 600; }
+  .sidebar-item .s-meta { margin-top: 3px; color: var(--text-secondary); }
+  .sidebar-item .s-del { color: var(--text-secondary); border-radius: 6px; }
+  .sidebar-item .s-del:hover { color: var(--danger); background: #ead0b3; }
+  .sidebar-empty { padding: 48px 18px; line-height: 1.75; }
+
+  .main-col { position: relative; background-color: var(--bg); background-image: var(--paper-texture); }
+  .chat { padding: clamp(28px, 5vh, 56px) 32px 24px; }
+  .chat-inner { max-width: 920px; }
+
+  .welcome {
+    max-width: 920px;
+    padding: clamp(12px, 5vh, 56px) 0 40px;
+    text-align: left;
+  }
+  .welcome .icon {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--primary);
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .welcome h2 {
+    max-width: 720px;
+    margin-bottom: 12px;
+    color: var(--text);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.2;
+    font-weight: 720;
+    font-family: "Songti SC", "STSong", serif;
+  }
+  .welcome p { max-width: 650px; color: var(--text-secondary); font-size: 15px; line-height: 1.8; }
+  .welcome .chips {
+    max-width: 760px;
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .welcome .chip {
+    min-height: 52px;
+    padding: 12px 14px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: none;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .welcome .chip::after { content: '→'; float: right; color: var(--primary); }
+  .welcome .chip:hover { color: var(--primary-dark); background: var(--primary-soft); border-color: #8d9da5; transform: translateY(-1px); }
+
+  .msg { gap: 12px; margin-bottom: 24px; }
+  .msg .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--primary);
+    background: var(--panel);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .msg.user .avatar { color: #fff; background: var(--primary); border-color: var(--primary); }
+  .msg.assistant .avatar { color: var(--primary); background: var(--primary-soft); border-color: #8d9da5; }
+  .msg .bubble { max-width: min(78%, 720px); padding: 13px 16px; border-radius: 8px; box-shadow: none; }
+  .msg.user .bubble { border-top-right-radius: 3px; }
+  .msg.assistant .bubble { border: 1px solid var(--border); border-top-left-radius: 3px; }
+  .bubble pre { border-radius: 8px; }
+
+  .input-area { padding: 14px 32px calc(14px + env(safe-area-inset-bottom)); background: rgba(239, 225, 189, .96); border-color: var(--border); }
+  .input-box {
+    max-width: 920px;
+    min-height: 58px;
+    padding: 7px 7px 7px 16px;
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+  }
+  .input-box:focus-within { background: var(--panel); border-color: var(--primary); box-shadow: 0 0 0 3px rgba(64, 93, 115, .14); }
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: var(--primary);
+    font-size: 21px;
+    font-weight: 500;
+  }
+  .send-btn:hover { background: var(--primary-dark); }
+  .input-hint { max-width: 920px; margin-top: 7px; color: var(--text-secondary); }
+  .toast { background: #24343a; border-radius: 8px; box-shadow: var(--shadow); }
+
+  @media (max-width: 900px) {
+    .header-left { width: auto; flex: 1; border-right: 0; padding-left: 14px; }
+    .header-right { flex: initial; padding: 0 14px; }
+    .sidebar-toggle { display: inline-flex; width: 38px; height: 38px; }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: var(--header-h);
+      bottom: 0;
+      z-index: 50;
+      width: min(86vw, var(--sidebar-w));
+      transform: translateX(-100%);
+      transition: transform .22s ease;
+      box-shadow: 12px 0 32px rgba(19, 38, 33, .16);
+    }
+    body.sidebar-open .sidebar { transform: translateX(0); }
+    body.sidebar-open::after {
+      content: '';
+      position: fixed;
+      inset: var(--header-h) 0 0 0;
+      z-index: 40;
+      background: rgba(12, 20, 18, .36);
+    }
+  }
+
+  @media (max-width: 680px) {
+    :root { --header-h: 64px; }
+    .header-sub, .toolbar label, .btn span { display: none; }
+    .header-title { font-size: 15px; }
+    .toolbar { padding-left: 5px; }
+    .subject-select { min-width: 104px; max-width: 112px; }
+    .btn { width: 38px; min-height: 38px; padding: 0; align-items: center; justify-content: center; font-size: 18px; }
+    .chat { padding: 28px 18px 20px; }
+    .welcome { padding-top: 12px; }
+    .welcome h2 { font-size: 30px; }
+    .welcome .chips { grid-template-columns: 1fr; }
+    .msg .bubble { max-width: 86%; }
+    .input-area { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .input-hint { display: none; }
+  }
+
+  @media (max-width: 460px) {
+    .header-right { gap: 5px; padding-right: 8px; }
+    .header-left { gap: 8px; padding-left: 8px; }
+    .logo { display: none; }
+    .toolbar { border: 0; background: transparent; padding: 0; }
+    .subject-select { min-width: 92px; max-width: 96px; }
+    #clearBtn { display: none; }
+    .welcome h2 { font-size: 27px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
 </head>
 <body>
 
   <header class="header">
     <div class="header-left">
       <button id="sidebarToggle" class="icon-btn sidebar-toggle" title="历史会话">☰</button>
-      <div class="logo">黑</div>
+      <div class="logo" aria-hidden="true">知</div>
       <div>
-        <div class="header-title">黑马程序员 · 智能问答助手</div>
-        <div class="header-sub">MySQL 知识库 + 文档 RAG 混合问答系统</div>
+        <div class="header-title">知问学伴</div>
+        <div class="header-sub">知识库与文档融合的智能学习助手</div>
       </div>
     </div>
     <div class="header-right">
@@ -367,8 +654,8 @@
           <option value="">全部学科</option>
         </select>
       </div>
-      <button id="newSessionBtn" class="btn" title="开启新的对话会话">🔄 新会话</button>
-      <button id="clearBtn" class="btn" title="清除当前会话的历史记录">🗑️ 清除</button>
+      <button id="newSessionBtn" class="btn" title="开启新的对话会话" aria-label="新会话">＋<span>新会话</span></button>
+      <button id="clearBtn" class="btn" title="清除当前会话的历史记录" aria-label="清除当前会话">×<span>清除</span></button>
     </div>
   </header>
 
@@ -376,8 +663,8 @@
     <!-- 左侧历史会话列表 -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <span class="sidebar-title">💬 历史会话</span>
-        <button id="newChatBtn" class="sidebar-new">+ 新建对话</button>
+        <span class="sidebar-title">历史会话</span>
+        <button id="newChatBtn" class="sidebar-new">＋ 新建对话</button>
       </div>
       <div class="sidebar-list" id="sessionList"></div>
     </aside>
@@ -387,10 +674,9 @@
       <main class="chat" id="chat">
         <div class="chat-inner" id="chatInner">
           <div class="welcome" id="welcome">
-            <div class="icon">💬</div>
-            <h2>你好，我是黑马程序员</h2>
-            <p>你的智能学习助手，专注于 IT 教育培训领域的答疑解惑。<br>
-            可以直接提问，也可以选择学科范围来获得更精准的答案。</p>
+            <div class="icon">知问</div>
+            <h2>把疑问变成理解</h2>
+            <p>你好，我是知问学伴。你可以直接提出学习问题，或先选择学科范围，让知识库检索更聚焦。</p>
             <div class="chips" id="suggestChips"></div>
           </div>
         </div>
@@ -399,14 +685,9 @@
       <footer class="input-area">
         <div class="input-box">
           <textarea id="input" rows="1" placeholder="输入你的问题，按 Enter 发送，Shift + Enter 换行"></textarea>
-          <button class="send-btn" id="sendBtn" title="发送">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+          <button class="send-btn" id="sendBtn" title="发送" aria-label="发送问题">↑</button>
         </div>
-        <div class="input-hint">内容由大模型生成，仅供学习参考 · 支持 MySQL 知识库命中与 RAG 文档检索</div>
+        <div class="input-hint">内容由大模型生成，仅供学习参考 | 支持知识库命中与文档检索</div>
       </footer>
     </section>
   </div>
@@ -431,10 +712,9 @@
   const toastEl = document.getElementById('toast');
 
   const WELCOME_HTML =
-    '<div class="icon">💬</div>' +
-    '<h2>你好，我是黑马程序员</h2>' +
-    '<p>你的智能学习助手，专注于 IT 教育培训领域的答疑解惑。<br>' +
-    '可以直接提问，也可以选择学科范围来获得更精准的答案。</p>' +
+    '<div class="icon">知问</div>' +
+    '<h2>把疑问变成理解</h2>' +
+    '<p>你好，我是知问学伴。你可以直接提出学习问题，或先选择学科范围，让知识库检索更聚焦。</p>' +
     '<div class="chips" id="suggestChips"></div>';
 
   const WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/stream';
@@ -531,7 +811,6 @@
     w.innerHTML = WELCOME_HTML;
     chatInner.appendChild(w);
     renderChips();
-    bindSuggestChips();
   }
 
   function removeWelcome() {
@@ -544,7 +823,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'msg ' + role;
     wrap.innerHTML =
-      '<div class="avatar">' + (role === 'user' ? '🧑‍💻' : '🤖') + '</div>' +
+      '<div class="avatar">' + (role === 'user' ? '你' : '知') + '</div>' +
       '<div><div class="bubble">' + renderMarkdown(content) + '</div></div>';
     chatInner.appendChild(wrap);
     scrollToBottom();
@@ -615,12 +894,12 @@
 
   function renderSessionList() {
     if (!sessions.length) {
-      sessionListEl.innerHTML = '<div class="sidebar-empty">暂无历史会话<br>开始新的对话吧 ✨</div>';
+      sessionListEl.innerHTML = '<div class="sidebar-empty">暂无历史会话<br>从一个问题开始</div>';
       return;
     }
     sessionListEl.innerHTML = sessions.map(function (s) {
       return '<div class="sidebar-item' + (s.id === sessionId ? ' active' : '') + '" data-id="' + escapeHtml(s.id) + '">' +
-               '<div class="s-avatar">💬</div>' +
+               '<div class="s-avatar">问</div>' +
                '<div class="s-body">' +
                  '<div class="s-title">' + escapeHtml(s.title) + '</div>' +
                  '<div class="s-meta">' +
@@ -694,7 +973,7 @@
     const el = document.getElementById('suggestChips');
     if (!el) return;
     el.innerHTML = chips.map(function (s) {
-      return '<div class="chip" data-subject="' + escapeHtml(s) + '">💡 咨询' + escapeHtml(s) + '问题</div>';
+      return '<button type="button" class="chip" data-subject="' + escapeHtml(s) + '">咨询' + escapeHtml(s) + '问题</button>';
     }).join('');
   }
 
@@ -715,19 +994,16 @@
       .catch(function () { toast('获取学科列表失败'); });
   }
 
-  function bindSuggestChips() {
-    document.querySelectorAll('#suggestChips .chip').forEach(function (chip) {
-      chip.onclick = function () {
-        const subject = chip.getAttribute('data-subject');
-        if (subject) {
-          subjectSelect.value = subject;
-          inputEl.value = '我想了解 ' + subject + ' 相关的问题';
-          inputEl.focus();
-          autoResize();
-        }
-      };
-    });
-  }
+  chatInner.addEventListener('click', function (event) {
+    const chip = event.target.closest('#suggestChips .chip');
+    if (!chip) return;
+    const subject = chip.getAttribute('data-subject');
+    if (!subject) return;
+    subjectSelect.value = subject;
+    inputEl.value = '我想了解 ' + subject + ' 相关的问题';
+    inputEl.focus();
+    autoResize();
+  });
 
   // ---------- 发送 ----------
   function send() {
@@ -750,7 +1026,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'msg assistant';
     wrap.innerHTML =
-      '<div class="avatar">🤖</div>' +
+      '<div class="avatar">知</div>' +
       '<div class="bubble typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
     chatInner.appendChild(wrap);
     scrollToBottom();
@@ -848,7 +1124,7 @@
       streaming = false;
       setInputDisabled(false);
       bubbleEl.classList.remove('typing');
-      bubbleEl.textContent = '⚠️ ' + errMsg;
+      bubbleEl.textContent = '回答失败：' + errMsg;
       try { ws.close(); } catch (e) {}
       toast(errMsg);
       scrollToBottom();
@@ -904,7 +1180,6 @@
     }
     loadSources();
     loadSessions();
-    bindSuggestChips();
     inputEl.focus();
   }
 
