@@ -50,15 +50,15 @@ qa_system = IntegratedQASystem()
 GREETING_PATTERNS = [
     {
         "pattern": r"^(你好|您好|hi|hello)",  # 匹配问候语
-        "response": "你好！我是黑马程序员，专注于为学生答疑解惑，很高兴为你服务！"
+        "response": "你好！我是知问学伴，专注于为学生答疑解惑，很高兴为你服务！"
     },
     {
         "pattern": r"^(你是谁|您是谁|你叫什么|你的名字|who are you)",  # 匹配身份询问
-        "response": "我是黑马程序员，你的智能学习助手，致力于提供 IT 教育相关的解答！"
+        "response": "我是知问学伴，你的智能学习助手，致力于提供 IT 教育相关的解答！"
     },
     {
         "pattern": r"^(在吗|在不在|有人吗)",  # 匹配在线确认
-        "response": "我在！我是黑马程序员，随时为你解答问题！"
+        "response": "我在！我是知问学伴，随时为你解答问题！"
     },
     {
         "pattern": r"^(干嘛呢|你在干嘛|做什么)",  # 匹配状态询问
@@ -245,30 +245,7 @@ async def get_sources():
 @app.get("/api/sessions")
 async def list_sessions():
     try:
-        # 查询所有会话，每个会话取最早的问题作为标题
-        qa_system.mysql_client.cursor.execute("""
-            SELECT c.session_id,
-                   (SELECT question FROM conversations
-                    WHERE session_id = c.session_id
-                    ORDER BY timestamp ASC, id ASC LIMIT 1) AS title,
-                   MAX(c.timestamp) AS last_time,
-                   FLOOR(COUNT(*) / 2) AS message_count
-            FROM conversations c
-            GROUP BY c.session_id
-            ORDER BY last_time DESC
-        """)
-        rows = qa_system.mysql_client.cursor.fetchall()
-        sessions = []
-        for row in rows:
-            session_id, title, last_time, message_count = row
-            sessions.append({
-                "session_id": session_id,
-                "title": title if title else "新会话",
-                "updated_at": last_time.strftime("%Y-%m-%d %H:%M:%S") if last_time else "",
-                "message_count": message_count or 0,
-            })
-        # 返回会话列表
-        return {"sessions": sessions}
+        return {"sessions": qa_system.list_sessions()}
     except Exception as e:
         # 抛出 HTTP 异常
         raise HTTPException(status_code=500, detail=f"获取会话列表失败: {str(e)}")
