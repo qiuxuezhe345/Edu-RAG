@@ -11,7 +11,9 @@ if PROJECT_ROOT not in sys.path:
 
 # ---- LangSmith 配置（必须在创建 OpenAI 客户端之前设置） ----
 # 使用 setdefault：若 shell 中已设置同名环境变量，则外部值优先
-os.environ.setdefault("LANGSMITH_TRACING", "true")
+os.environ.setdefault(
+    "LANGSMITH_TRACING", "true" if os.getenv("LANGSMITH_API_KEY") else "false"
+)
 os.environ.setdefault("LANGSMITH_PROJECT", "111111")
 
 # 导入 LangChain 提示模板
@@ -40,7 +42,8 @@ class StrategySelector:
         self.client = OpenAI(api_key=config.DASHSCOPE_API_KEY,
                              base_url=config.DASHSCOPE_BASE_URL)
         # 用 langsmith 包装客户端，开启对 DashScope/DeepSeek 调用的自动追踪
-        if LANGSMITH_AVAILABLE and wrap_openai is not None:
+        tracing_enabled = os.getenv("LANGSMITH_TRACING", "false").lower() == "true"
+        if LANGSMITH_AVAILABLE and wrap_openai is not None and tracing_enabled:
             try:
                 self.client = wrap_openai(self.client)
                 logger.info("已启用 LangSmith 追踪")

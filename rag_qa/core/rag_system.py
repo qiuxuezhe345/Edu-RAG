@@ -11,7 +11,9 @@ import time
 from base import config,logger
 from rag_qa.core.query_classifier import QueryClassifier  # 导入查询分类器
 from rag_qa.core.strategy_selector import StrategySelector  # 导入策略选择器
-os.environ.setdefault("LANGSMITH_TRACING", "true")
+os.environ.setdefault(
+    "LANGSMITH_TRACING", "true" if os.getenv("LANGSMITH_API_KEY") else "false"
+)
 os.environ.setdefault("LANGSMITH_PROJECT", "111111111")
 #   定义 RAGSystem 类，封装 RAG 系统的核心逻辑
 class RAGSystem:
@@ -29,7 +31,7 @@ class RAGSystem:
         self.strategy_selector = StrategySelector()
 
     #   定义私有方法，使用假设文档进行检索（HyDE）
-    def _retrieve_with_hyde(self, query):
+    def _retrieve_with_hyde(self, query, source_filter=None):
         logger.info(f"使用 HyDE 策略进行检索 (查询: '{query}')")
         #   获取假设问题生成的 Prompt 模板
         hyde_prompt_template = RAGPrompts.hyde_prompt()  # 使用 template 后缀区分
@@ -40,14 +42,14 @@ class RAGSystem:
             #   使用假设答案进行检索，并返回检索结果
             #   注意：HyDE 通常只用于生成检索向量，不一定需要 rerank 这一步，但这里复用了
             return self.vector_store.hybrid_search_with_rerank(
-                hypo_answer, k=config.RETRIEVAL_K  # 使用 K 而非 M
+                hypo_answer, k=config.RETRIEVAL_K, source_filter=source_filter
             )
         except Exception as e:
             logger.error(f"HyDE 策略执行失败: {e}")
             return []
 
     #   定义私有方法，使用子查询进行检索
-    def _retrieve_with_subqueries(self, query):
+    def _retrieve_with_subqueries(self, query, source_filter=None):
         logger.info(f"使用子查询策略进行检索 (查询: '{query}')")
         #   获取子查询生成的 Prompt 模板
         subquery_prompt_template = RAGPrompts.subquery_prompt()  # 使用 template 后缀区分
@@ -67,7 +69,7 @@ class RAGSystem:
                 #   使用子查询进行检索，并将结果添加到列表中
                 #   这里对每个子查询都执行了 hybrid search + rerank，开销可能较大
                 docs = self.vector_store.hybrid_search_with_rerank(
-                    sub_q, k=config.RETRIEVAL_K  # 使用 K
+                    sub_q, k=config.RETRIEVAL_K, source_filter=source_filter
                 )
                 all_docs.extend(docs)
                 logger.info(f"子查询 '{sub_q}' 检索到 {len(docs)} 个文档")
@@ -80,14 +82,16 @@ class RAGSystem:
             logger.info(f"所有子查询共检索到 {len(all_docs)} 个文档, 去重后剩 {len(unique_docs)} 个")
             #   返回去重后的文档，限制数量 (是否需要在此处限制? retrieve_and_merge 末尾会限制)
             # return unique_docs[: Config.CANDIDATE_M]
-            return unique_docs  # 返回所有唯一文档，让 retrieve_and_merge 处理数量
+            return self.vector_store.rerank_documents(
+                query, unique_docs, top_k=config.RETRIEVAL_K
+            )
 
         except Exception as e:
             logger.error(f"子查询策略执行失败: {e}")
             return []
 
     #   定义私有方法，使用回溯问题进行检索
-    def _retrieve_with_backtracking(self, query):
+    def _retrieve_with_backtracking(self, query, source_filter=None):
         logger.info(f"使用回溯问题策略进行检索 (查询: '{query}')")
         #   获取回溯问题生成的 Prompt 模板
         backtrack_prompt_template = RAGPrompts.backtracking_prompt()  # 使用 template 后缀区分
@@ -97,7 +101,7 @@ class RAGSystem:
             logger.info(f"生成的回溯问题: '{simplified_query}'")
             #   使用回溯问题进行检索，并返回检索结果
             return self.vector_store.hybrid_search_with_rerank(
-                simplified_query, k=config.RETRIEVAL_K  # 使用 K
+                simplified_query, k=config.RETRIEVAL_K, source_filter=source_filter
             )
         except Exception as e:
             logger.error(f"回溯问题策略执行失败: {e}")
@@ -112,13 +116,13 @@ class RAGSystem:
         #   根据检索策略选择不同的检索方式
         ranked_sub_chunks = [] # 初始化
         if strategy == "回溯问题检索":
-            ranked_sub_chunks = self._retrieve_with_backtracking(query)
+            ranked_sub_chunks = self._retrieve_with_backtracking(query, source_filter)
         elif strategy == "子查询检索":
-            ranked_sub_chunks = self._retrieve_with_subqueries(query) # 返回的是唯一文档列表
+            ranked_sub_chunks = self._retrieve_with_subqueries(query, source_filter)
              # 注意：子查询返回的是已 rerank 过的父文档或子块列表，后续合并逻辑可能需要调整
              # 当前实现中，子查询返回的是初步检索（可能已rerank）的块，再进行合并
         elif strategy == "假设问题检索":
-            ranked_sub_chunks = self._retrieve_with_hyde(query)
+            ranked_sub_chunks = self._retrieve_with_hyde(query, source_filter)
         else:  #   默认或“直接检索”
             logger.info(f"使用直接检索策略 (查询: '{query}')")
             ranked_sub_chunks = self.vector_store.hybrid_search_with_rerank(

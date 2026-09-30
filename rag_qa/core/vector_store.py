@@ -159,77 +159,107 @@ class VectorStore:
             # 记录插入或更新的文档数量日志
             logger.info(f"已插入或更新 {len(data)} 个文档")
 
+    def _encode_query(self, query):
+        """Encode one query into the dense and sparse formats Milvus expects."""
+        query_embeddings = self.embedding_function([str(query)])
+        dense_vector = query_embeddings["dense"][0]
+        sparse_vector = {}
+        row = query_embeddings["sparse"][[0], :]
+        for idx, value in zip(row.indices, row.data):
+            sparse_vector[int(idx)] = float(value)
+        return dense_vector, sparse_vector
+
+    @staticmethod
+    def _safe_filter(source_filter):
+        if not source_filter:
+            return ""
+        escaped = str(source_filter).replace("\\", "\\\\").replace("'", "\\'")
+        return f"source == '{escaped}'"
+
+    def search(self, query, top_k=5, candidate_k=20, mode="hybrid", rerank=True,
+               sparse_weight=0.7, dense_weight=1.0, source_filter=None):
+        """Run configurable retrieval for production and ablation evaluation."""
+        if mode not in {"dense", "sparse", "hybrid"}:
+            raise ValueError("mode must be one of: dense, sparse, hybrid")
+
+        top_k = max(1, int(top_k))
+        candidate_k = max(top_k, int(candidate_k))
+        dense_vector, sparse_vector = self._encode_query(query)
+        filter_expr = self._safe_filter(source_filter)
+        output_fields = ["text", "parent_id", "parent_content", "source", "timestamp"]
+
+        if mode == "hybrid":
+            dense_request = AnnSearchRequest(
+                data=[dense_vector], anns_field="dense_vector",
+                param={"metric_type": "IP", "params": {"nprobe": 10}},
+                limit=candidate_k, expr=filter_expr,
+            )
+            sparse_request = AnnSearchRequest(
+                data=[sparse_vector], anns_field="sparse_vector",
+                param={"metric_type": "IP", "params": {}},
+                limit=candidate_k, expr=filter_expr,
+            )
+            hits = self.client.hybrid_search(
+                collection_name=self.collection_name,
+                reqs=[sparse_request, dense_request],
+                ranker=WeightedRanker(float(sparse_weight), float(dense_weight)),
+                limit=candidate_k,
+                output_fields=output_fields,
+            )[0]
+        else:
+            is_dense = mode == "dense"
+            hits = self.client.search(
+                collection_name=self.collection_name,
+                data=[dense_vector if is_dense else sparse_vector],
+                anns_field="dense_vector" if is_dense else "sparse_vector",
+                search_params=(
+                    {"metric_type": "IP", "params": {"nprobe": 10}}
+                    if is_dense else {"metric_type": "IP", "params": {}}
+                ),
+                filter=filter_expr,
+                limit=candidate_k,
+                output_fields=output_fields,
+            )[0]
+
+        sub_chunks = []
+        for hit in hits:
+            doc = self._doc_from_hit(hit.get("entity", {}))
+            doc.metadata["child_id"] = str(hit.get("id", ""))
+            doc.metadata["retrieval_score"] = float(hit.get("distance", 0.0))
+            sub_chunks.append(doc)
+
+        parent_docs = self._get_unique_parent_docs(sub_chunks)
+        if rerank:
+            parent_docs = self.rerank_documents(query, parent_docs)
+
+        return parent_docs[:top_k]
+
+    def rerank_documents(self, query, documents, top_k=None):
+        """Apply the BGE cross-encoder to an existing document candidate list."""
+        documents = list(documents)
+        if len(documents) > 1:
+            pairs = [[str(query), doc.page_content] for doc in documents]
+            scores = self.reranker.predict(pairs)
+            for doc, score in zip(documents, scores):
+                doc.metadata["rerank_score"] = float(score)
+            documents.sort(
+                key=lambda doc: doc.metadata.get("rerank_score", float("-inf")),
+                reverse=True,
+            )
+        return documents if top_k is None else documents[:max(1, int(top_k))]
+
     # 定义方法，执行混合检索并重排序
     def hybrid_search_with_rerank(self, query, k=config.RETRIEVAL_K, source_filter=None):
-        # 使用 BGE-M3 嵌入函数生成查询的嵌入
-        query_embeddings = self.embedding_function([str(query)])
-        # 获取查询的稠密向量
-        dense_query_vector = query_embeddings["dense"][0]
-        # 初始化查询的稀疏向量字典
-        sparse_query_vector = {}
-        # 获取查询稀疏向量的第 0 行数据
-        row = query_embeddings["sparse"][[0], :]
-        # 获取稀疏向量的非零值索引
-        indices = row.indices
-        # 获取稀疏向量的非零值
-        values = row.data
-        # 将索引和值配对，填充稀疏向量字典
-        for idx, value in zip(indices, values):
-            sparse_query_vector[idx] = value
-
-        # 初始化过滤表达式，默认不过滤
-        # source == 'ai'
-        filter_expr = f"source == '{source_filter}'" if source_filter else ""
-        # 创建稠密向量搜索请求
-        dense_request = AnnSearchRequest(
-            data=[dense_query_vector],
-            anns_field="dense_vector",
-            param={"metric_type": "IP", "params": {"nprobe": 10}},
-            limit=k,
-            expr=filter_expr
+        return self.search(
+            query=query,
+            top_k=config.CANDIDATE_M,
+            candidate_k=max(int(k) * 4, 20),
+            mode="hybrid",
+            rerank=True,
+            sparse_weight=0.7,
+            dense_weight=1.0,
+            source_filter=source_filter,
         )
-        # 创建稀疏向量搜索请求
-        sparse_request = AnnSearchRequest(
-            data=[sparse_query_vector],
-            anns_field="sparse_vector",
-            param={"metric_type": "IP", "params": {}},
-            limit=k,
-            expr=filter_expr
-        )
-
-        # 创建加权排序器，稀疏向量权重 0.7，稠密向量权重 1.0
-        ranker = WeightedRanker(0.7, 1.0)
-        # 执行混合搜索，返回 Top-K 结果
-        results = self.client.hybrid_search(
-            collection_name=self.collection_name,
-            reqs=[sparse_request,dense_request],
-            ranker=ranker,
-            limit=k,
-            output_fields=["text", "parent_id", "parent_content", "source", "timestamp"]
-        )[0]
-
-        # 将搜索结果转换为 Document 对象列表
-        sub_chunks = [self._doc_from_hit(hit["entity"]) for hit in results]
-        print(f'sub_chunks-->{len(sub_chunks)}')
-        # 从子块中提取去重的父文档
-        parent_docs = self._get_unique_parent_docs(sub_chunks)
-        # 如果只有1个文档，直接返回跳过重排序
-        if len(parent_docs) < 2:
-            return parent_docs[:config.CANDIDATE_M]
-            # 如果有父文档，进行重排序
-        if parent_docs:
-            # 创建查询与文档内容的配对列表
-            pairs = [[query, doc.page_content] for doc in parent_docs]
-            # 使用 BGE-Reranker 计算每个配对的得分
-            scores = self.reranker.predict(pairs)
-            # 根据得分从高到低排序文档
-            ranked_parent_docs = [doc for _, doc in sorted(zip(scores, parent_docs), reverse=True)]
-        # 如果没有父文档，返回空列表
-        else:
-            ranked_parent_docs = []
-
-        # 返回前 k 个重排序后的文档
-        return ranked_parent_docs[:config.CANDIDATE_M]
 
     # 定义私有方法，从子块中提取去重的父文档
     def _get_unique_parent_docs(self, sub_chunks):
