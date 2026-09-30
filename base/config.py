@@ -20,7 +20,7 @@ class Config:
         # 创建配置解析器,configparser.ExtendedInterpolation():启用插值，可以ini文件里以${别的块的值 redis:host}
         self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
         # 读取配置文件 load
-        self.config.read(config_file)
+        self.config.read(config_file, encoding='utf-8')
 
         # MySQL 配置
         # MySQL 主机地址
