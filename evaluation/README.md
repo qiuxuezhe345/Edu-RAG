@@ -2,18 +2,20 @@
 
 这些脚本真实计算指标，不会把目标百分比写入结果。建议先跑小样本检查环境，再执行 300 条完整评测。
 
+以下命令均显式使用项目虚拟环境，避免误用 Anaconda `base` 环境导致 PyTorch DLL 加载失败。
+
 ## 1. 生成 300 条测试集
 
 使用 DashScope 生成自然改写，默认包含 270 条可回答问题和 30 条拒答问题：
 
 ```powershell
-python -m evaluation.build_dataset
+.\.evalvenv\Scripts\python.exe -m evaluation.build_dataset
 ```
 
 仅检查流程、不调用 LLM：
 
 ```powershell
-python -m evaluation.build_dataset --no-llm
+.\.evalvenv\Scripts\python.exe -m evaluation.build_dataset --no-llm
 ```
 
 `--no-llm` 生成的是模板改写，只适合冒烟测试，可能高估检索指标。正式报告请使用默认的 LLM 改写数据，并人工抽检至少 10% 样本。
@@ -25,13 +27,13 @@ python -m evaluation.build_dataset --no-llm
 先跑 10 条冒烟测试：
 
 ```powershell
-python -m evaluation.run_retrieval_eval --limit 10
+.\.evalvenv\Scripts\python.exe -m evaluation.run_retrieval_eval --limit 10
 ```
 
 执行完整评测：
 
 ```powershell
-python -m evaluation.run_retrieval_eval
+.\.evalvenv\Scripts\python.exe -m evaluation.run_retrieval_eval
 ```
 
 CPU 上执行 BGE-Reranker-Large 会比较慢，当前机器实测每条约 12 至 15 秒；完整评测建议使用 CUDA。
@@ -47,7 +49,7 @@ CPU 上执行 BGE-Reranker-Large 会比较慢，当前机器实测每条约 12 �
 可以调节候选池和融合权重：
 
 ```powershell
-python -m evaluation.run_retrieval_eval --candidate-k 30 --sparse-weight 0.7 --dense-weight 1.0
+.\.evalvenv\Scripts\python.exe -m evaluation.run_retrieval_eval --candidate-k 30 --sparse-weight 0.7 --dense-weight 1.0
 ```
 
 ## 3. 生成质量与拒答评测
@@ -55,19 +57,19 @@ python -m evaluation.run_retrieval_eval --candidate-k 30 --sparse-weight 0.7 --d
 该脚本会实际调用问答模型和裁判模型，完整运行 300 条会产生 API 费用。先运行小样本：
 
 ```powershell
-python -m evaluation.run_generation_eval --limit 10
+.\.evalvenv\Scripts\python.exe -m evaluation.run_generation_eval --limit 10
 ```
 
 单独检查拒答样本：
 
 ```powershell
-python -m evaluation.run_generation_eval --subset unanswerable --limit 10 --strategy 直接检索
+.\.evalvenv\Scripts\python.exe -m evaluation.run_generation_eval --subset unanswerable --limit 10 --strategy 直接检索
 ```
 
 确认结果后执行完整评测：
 
 ```powershell
-python -m evaluation.run_generation_eval
+.\.evalvenv\Scripts\python.exe -m evaluation.run_generation_eval
 ```
 
 结果保存在 `evaluation/results/generation/summary.json` 和 `details.csv`，包含：

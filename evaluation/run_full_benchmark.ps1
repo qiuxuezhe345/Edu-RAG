@@ -7,7 +7,10 @@ param(
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $ProjectRoot ".evalvenv\Scripts\python.exe"
-$Python = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
+if (-not (Test-Path $VenvPython)) {
+    throw "未找到项目解释器：$VenvPython。请先创建并安装 .evalvenv 依赖。"
+}
+$Python = $VenvPython
 
 Push-Location $ProjectRoot
 try {
