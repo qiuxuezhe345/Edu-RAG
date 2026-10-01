@@ -53,17 +53,11 @@ EduRag/
 - MySQL 5.7+ 或 8.x
 - 可选：支持 CUDA 的 NVIDIA GPU（无 GPU 时会回退到 CPU）
 
-项目暂未提供锁定版本的 `requirements.txt`。主要 Python 依赖如下：
+使用项目依赖清单安装 Python 包：
 
 ```bash
-pip install fastapi uvicorn pymysql redis rank-bm25 jieba numpy pandas \
-  openai langsmith torch transformers sentence-transformers \
-  pymilvus milvus-model langchain-core langchain-community \
-  langchain-text-splitters pillow opencv-python pymupdf \
-  python-docx python-pptx tqdm rapidocr-onnxruntime
+python -m pip install -r requirements.txt
 ```
-
-> Windows PowerShell 不支持反斜杠续行，可将命令写成一行执行。
 
 ## 快速开始
 
@@ -90,7 +84,11 @@ rag_qa/models/
 
 ### 3. 创建配置文件
 
-在项目根目录创建 `config.ini`。该文件已被 `.gitignore` 排除，请勿提交真实密码或 API Key。
+复制配置模板并填写本机数据库密码和 DashScope API Key。`config.ini` 已被 `.gitignore` 排除，请勿提交真实密码或 API Key。
+
+```powershell
+Copy-Item config.ini.example config.ini
+```
 
 ```ini
 [mysql]

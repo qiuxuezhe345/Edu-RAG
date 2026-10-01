@@ -1,0 +1,44 @@
+[mysql]
+host = localhost
+user = root
+password = your_mysql_password
+database = subjects_kg
+
+[redis]
+host = localhost
+port = 6379
+password = 1234
+db = 0
+
+[milvus]
+host = localhost
+port = 19530
+database_name = itcast
+collection_name = edurag_xian_1
+
+[llm]
+model = qwen-plus
+dashscope_api_key = your_dashscope_api_key
+dashscope_base_url = https://dashscope.aliyuncs.com/compatible-mode/v1
+
+[retrieval]
+parent_chunk_size = 1200
+child_chunk_size = 300
+chunk_overlap = 50
+retrieval_k = 5
+candidate_m = 2
+
+[logger]
+log_file = logs/app.log
+
+[app]
+valid_sources = ["ai", "java", "test", "ops", "bigdata"]
+customer_service_phone = 12345678
+
+[classifier]
+bert_model_path = rag_qa/models/bert-base-chinese
+classifier_data_path = rag_qa/classify_data/model_generic_5000.json
+classifier_model_path = rag_qa/models/bert_query_classifier
+
+[demo]
+test = false
